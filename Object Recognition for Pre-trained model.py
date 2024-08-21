@@ -25,29 +25,19 @@ def match_template(image, template):
     img_h, img_w = image_array.shape
     tmpl_h, tmpl_w = template_array.shape
     
-    best_match = None
-    best_score = -float('inf')  # For NCC, higher values are better
+    # Use FFT to compute the correlation
+    correlation = np.fft.fft2(image_array) * np.conj(np.fft.fft2(template_array, s=image_array.shape))
+    correlation = np.fft.ifft2(correlation).real  # Inverse FFT to get the correlation result
     
-    template_mean = np.mean(template_array)
-    template_std = np.std(template_array)
+    # Normalize the correlation map
+    correlation = correlation / (tmpl_h * tmpl_w)  # Adjust for the template size
     
-    for y in range(img_h - tmpl_h + 1):
-        for x in range(img_w - tmpl_w + 1):
-            sub_image = image_array[y:y+tmpl_h, x:x+tmpl_w]
-            sub_image_mean = np.mean(sub_image)
-            sub_image_std = np.std(sub_image)
-            
-            norm_sub_image = (sub_image - sub_image_mean) / sub_image_std
-            norm_template = (template_array - template_mean) / template_std
-            
-            score = np.sum(norm_sub_image * norm_template)
-            print(f"Matching region at ({x}, {y}) with score: {score}")
-            
-            # Save the best matching region for visualization
-            if score > best_score:
-                best_score = score
-                best_match = (x, y)
-                save_sub_image(image_array, (y, x), (tmpl_h, tmpl_w), 'best_match_region.jpg')
+    # Find the best match
+    best_match = np.unravel_index(np.argmax(correlation), correlation.shape)
+    best_score = correlation[best_match]
+
+    # Save the best matching region for visualization
+    save_sub_image(image_array, best_match, (tmpl_h, tmpl_w), 'best_match_region.jpg')
     
     return best_match, best_score
 
@@ -69,14 +59,3 @@ else:
     print("No match found")
 print(f"Image size: {image.size}")
 print(f"Template size: {template.size}")
-
-
-
-
-
-
-output:
-print(f"Image size: {image.size}")
-print(f"Template size: {template.size}")
-
-
